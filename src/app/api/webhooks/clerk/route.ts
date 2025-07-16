@@ -1,4 +1,4 @@
-import { Webhook } from '@clerk/nextjs/server';
+import { verifyWebhook } from '@clerk/nextjs/webhooks';
 import { dbConnect } from "@/lib/db";
 import { createUser } from "@/lib/actions/user.action";
 import { config } from "@/lib/config";
@@ -13,18 +13,18 @@ type NextResponse = Response;
 export async function POST(req: NextRequest) {
   try {
     const headerSignature = req.headers.get('x-clerk-signature');
-    const body = await req.json();
-
-    // Verify Clerk webhook signature
-    const webhook = new Webhook(config.clerk.webhookSecret);
-    const isValid = webhook.verify(body, headerSignature);
-
-    if (!isValid) {
-      throw new Error('Invalid webhook signature');
+    if (!headerSignature) {
+      throw new Error('Missing x-clerk-signature header');
     }
 
+    const body = await req.json();
     if (!config.clerk.webhookSecret) {
       throw new Error('WEBHOOK_SECRET is not configured');
+    }
+
+    const isValid = verifyWebhook(body, headerSignature, config.clerk.webhookSecret);
+    if (!isValid) {
+      throw new Error('Invalid webhook signature');
     }
 
     const evt = body as {
