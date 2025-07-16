@@ -2,19 +2,38 @@
 
 import User from "../modals/use.modal";
 import { dbConnect } from "../db";
+import { Document } from "mongoose";
 
-export async function createUser(user: any) {
+interface UserDocument extends Document {
+    clerkId: string;
+    name: string;
+    email: string;
+    imageUrl: string;
+    firstName: string;
+    lastName: string;
+}
+
+interface CreateUserProps {
+    clerkId: string;
+    name: string;
+    email: string;
+    imageUrl: string;
+    firstName: string;
+    lastName: string;
+}
+
+export async function createUser(user: CreateUserProps) {
     try {
         await dbConnect();
-        const newUser = await User.create({
+        const createdUser = new User({
             clerkId: user.clerkId,
-            name: user.name,
             email: user.email,
             imageUrl: user.imageUrl,
             firstName: user.firstName,
-            lastName: user.lastName
+            lastName: user.lastName,
         });
-        return JSON.parse(JSON.stringify(newUser));
+        await createdUser.save();
+        return createdUser;
     } catch (error) {
         console.log(error);
         console.error("Error creating user:", error);
