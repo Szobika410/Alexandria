@@ -96,7 +96,11 @@ const Settings = () => {
             <div
               className="bg-white p-4 rounded-lg shadow-sm cursor-pointer"
               onClick={() => {
+<<<<<<< HEAD
                 signOut();
+=======
+                signOut().then(() => navigate('/sign-in'));
+>>>>>>> 3ff7d3fe4cd03edd8331a22f101e0b26b137dde4
               }}
             >
               <div className="flex items-center justify-between">
