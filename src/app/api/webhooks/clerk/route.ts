@@ -1,66 +1,17 @@
-<<<<<<< HEAD
-import {clerkClient} from "@clerk/nextjs";
-import {WebhookEvent} from "@clerk/nextjs/server";
-import {headers} from "next/headers";
-import {NextResponse} from "next/server";
-import {Webhook} from "svix";
-
-import {createUser} from "@/lib/actions/user.action";
-
-export async function POST(req: NextRequest) {
-    try {
-      const evt = await verifyWebhook(req)
-  
-      // Do something with payload
-      // For this guide, log payload to console
-      const { id } = evt.data
-      const eventType = evt.type
-
-      if (eventType === "user.created") {
-        const {id, name, email_addresses, image_url, first_name, last_name} = evt.data
-
-        const user = {
-          clerkId: id,
-          name: name!,
-          email: email_addresses[0].email_address,
-          imageUrl: image_url,
-          firstName: first_name,
-          lastName: last_name,
-        }
-
-        console.log(user);
-
-        const newUser = await createUser(user);
-        
-        if(newUser){
-            await clerkClient().users.updateUser(id, {
-               publicMetadata: {
-                userId: newUser._id,
-               },
-            });
-        }
-
-        return NextResponse.json ({message: "User created", user: newUser});
-
-
-      }
-      console.log(`Received webhook with ID ${id} and event type of ${eventType}`)
-      console.log('Webhook payload:', evt.data)
-  
-      return new Response('Webhook received', { status: 200 })
-    } catch (err) {
-      console.error('Error verifying webhook:', err)
-      return new Response('Error verifying webhook', { status: 400 })
-    }
-  }
-=======
-import { NextRequest, NextResponse } from "next/server";
 import { dbConnect } from "@/lib/db";
 import { createUser } from "@/lib/actions/user.action";
+import { config } from "@/lib/config";
+
+interface NextRequest {
+  headers: Headers;
+  json: () => Promise<any>;
+}
+
+type NextResponse = Response;
 
 export async function POST(req: NextRequest) {
   try {
-    const headerSignature = req.headers.get("x-clerk-signature");
+    const headerSignature = req.headers.get('x-clerk-signature');
     const body = await req.json();
 
     if (!headerSignature || !body) {
@@ -68,7 +19,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Verify Clerk webhook signature
-    if (!process.env.WEBHOOK_SECRET) {
+    if (!config.clerk.webhookSecret) {
       throw new Error('WEBHOOK_SECRET is not configured');
     }
 
@@ -120,7 +71,7 @@ export async function POST(req: NextRequest) {
       const clerkUser = await fetch(`https://api.clerk.dev/v1/users/${id}`, {
         method: 'PATCH',
         headers: {
-          'Authorization': `Bearer ${process.env.CLERK_SECRET_KEY!}`,
+          'Authorization': `Bearer ${config.clerk.secretKey!}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -135,10 +86,15 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    return NextResponse.json({ success: true });
+    return new Response(JSON.stringify({ success: true }), {
+      headers: { 'Content-Type': 'application/json' },
+      status: 200
+    });
   } catch (error) {
     console.error('Webhook error:', error);
-    return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
+    return new Response(JSON.stringify({ error: 'Invalid request' }), {
+      headers: { 'Content-Type': 'application/json' },
+      status: 400
+    });
   }
 }
->>>>>>> 3ff7d3fe4cd03edd8331a22f101e0b26b137dde4
