@@ -1,10 +1,6 @@
 import { useState, useEffect } from "react";
 import { ArrowLeft, Camera, Edit, Star, Book, MessageCircle, Settings, Save, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-<<<<<<< HEAD
-
-=======
->>>>>>> 3ff7d3fe4cd03edd8331a22f101e0b26b137dde4
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
@@ -69,13 +65,6 @@ const Profile = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-<<<<<<< HEAD
-      <div className="flex justify-between items-center p-4 border-b bg-white">
-        <Button variant="ghost" size="sm" onClick={() => navigate("/")}>Vissza</Button>
-        <h1 className="text-xl font-semibold">Profil</h1>
-      </div>
-=======
->>>>>>> 3ff7d3fe4cd03edd8331a22f101e0b26b137dde4
       <div className="bg-white border-b border-gray-200">
         <div className="flex items-center justify-between p-4">
           <Button variant="ghost" size="sm" onClick={() => navigate("/")} className="mr-3">

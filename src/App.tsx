@@ -3,11 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-<<<<<<< HEAD
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-=======
-import { BrowserRouter, Routes, Route } from "react-router-dom";
->>>>>>> 3ff7d3fe4cd03edd8331a22f101e0b26b137dde4
 import { SignIn, SignUp, SignedIn, SignedOut, ClerkLoading } from "@clerk/clerk-react";
 import Index from "./pages/Index";
 import BookDetails from "./pages/BookDetails";
@@ -40,10 +36,7 @@ const App = () => (
         profileButton: 'bg-blue-600 hover:bg-blue-700 text-white'
       },
     }}
-<<<<<<< HEAD
     signInFallbackRedirectUrl={import.meta.env.NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL}
-=======
->>>>>>> 3ff7d3fe4cd03edd8331a22f101e0b26b137dde4
   >
     <BrowserRouter>
       <div className="min-h-screen">
@@ -61,12 +54,6 @@ const App = () => (
                 <div className="flex items-center justify-center h-full">
                   <SignIn 
                     path="/sign-in"
-<<<<<<< HEAD
-=======
-                    routing="path"
-                    signUpUrl="/sign-up"
-                    afterSignInUrl="/"
->>>>>>> 3ff7d3fe4cd03edd8331a22f101e0b26b137dde4
                   />
                 </div>
               </SignedOut>
@@ -77,11 +64,7 @@ const App = () => (
               <SignedOut>
                 <div className="flex items-center justify-center h-full">
                   <SignUp 
-<<<<<<< HEAD
                     path="/sign-up"
-=======
-                    afterSignUpUrl="/sign-in"
->>>>>>> 3ff7d3fe4cd03edd8331a22f101e0b26b137dde4
                   />
                 </div>
               </SignedOut>
@@ -105,12 +88,9 @@ const App = () => (
                   </TooltipProvider>
                 </QueryClientProvider>
               </SignedIn>
-<<<<<<< HEAD
               <SignedOut>
                 <Navigate to="/sign-in" replace />
               </SignedOut>
-=======
->>>>>>> 3ff7d3fe4cd03edd8331a22f101e0b26b137dde4
             </div>
           } />
           <Route path="/book/:id" element={
@@ -156,11 +136,6 @@ const App = () => (
           <Route path="/messages" element={
             <SignedIn>
               <Messages />
-            </SignedIn>
-          } />
-          <Route path="/profile" element={
-            <SignedIn>
-              <Profile />
             </SignedIn>
           } />
           <Route path="/settings" element={
