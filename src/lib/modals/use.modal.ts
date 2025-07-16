@@ -6,7 +6,7 @@ const UserSchema = new Schema({
         required: true,
         unique: true
     },
-    name: {
+    username: {
         type: String,
         required: true
     },
@@ -35,6 +35,8 @@ const UserSchema = new Schema({
         type: Date,
         default: Date.now
     }
+}, {
+    timestamps: true
 });
 
 export const User = models.User || model("User", UserSchema);
