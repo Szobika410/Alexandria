@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
       throw new Error('WEBHOOK_SECRET is not configured');
     }
 
-    const isValid = verifyWebhook(body, headerSignature, config.clerk.webhookSecret);
+    const isValid = verifyWebhook(body);
     if (!isValid) {
       throw new Error('Invalid webhook signature');
     }
