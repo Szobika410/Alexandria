@@ -1,63 +1,69 @@
-import { Webhook } from "svix";
-import mongoose from "mongoose";
-import { NextResponse } from "next/server";
-import { dbConnect } from "@/lib/dbConnect";
+import { dbConnect } from '@/lib/mongoose'; // vagy: import { dbConnect } from '../../lib/mongoose';
+import User from '@/models/User'; // vagy: import User from '../../models/User';
+import { Webhook } from 'svix';
 
-const WEBHOOK_SECRET = process.env.CLERK_WEBHOOK_SECRET;
+const webhookSecret = process.env.CLERK_WEBHOOK_SECRET;
 
-export async function POST(req) {
+export default async function handler(req, res) {
+  if (req.method !== 'POST') return res.status(405).end();
+
+  // Svix header-ek:
+  const svix_id = req.headers['svix-id'];
+  const svix_signature = req.headers['svix-signature'];
+  const svix_timestamp = req.headers['svix-timestamp'];
+
+  if (!svix_id || !svix_signature || !svix_timestamp) {
+    return res.status(400).send('Missing Svix headers');
+  }
+
+  const wh = new Webhook(webhookSecret);
+
+  let event;
   try {
-    const headers = req.headers;
-    const payload = await req.json();
-    const svix_id = headers.get("svix-id");
-    const svix_timestamp = headers.get("svix-timestamp");
-    const svix_signature = headers.get("svix-signature");
-
-    const wh = new Webhook(WEBHOOK_SECRET);
-    let event = wh.verify(payload, {
-      "svix-id": svix_id,
-      "svix-timestamp": svix_timestamp,
-      "svix-signature": svix_signature
+    event = wh.verify(JSON.stringify(req.body), {
+      'svix-id': svix_id,
+      'svix-timestamp': svix_timestamp,
+      'svix-signature': svix_signature,
     });
+  } catch (err) {
+    return res.status(400).json({ error: 'Invalid webhook signature' });
+  }
 
-    await dbConnect();
+  await dbConnect();
 
-    switch (event.type) {
-      case "user.created":
-        await mongoose.model("User").create({
-          clerkUserId: event.data.id,
-          email: event.data.email_addresses[0].email_address,
-          firstName: event.data.first_name || "",
-          lastName: event.data.last_name || "",
-          image: event.data.image_url
-        });
-        break;
+  const { id, email_addresses, first_name, last_name, username, profile_image_url } = event.data;
 
-      case "user.updated":
-        await mongoose.model("User").findOneAndUpdate(
-          { clerkUserId: event.data.id },
-          {
-            email: event.data.email_addresses[0].email_address,
-            firstName: event.data.first_name || "",
-            lastName: event.data.last_name || "",
-            image: event.data.image_url
-          },
-          { upsert: true, new: true }
-        );
-        break;
-
-      default:
-        // We can ignore other event types
-        break;
-    }
-
-    return NextResponse.json({ status: "success" });
-  } catch (error) {
-    console.error("Webhook error:", error);
-    return NextResponse.json(
-      { status: "error", message: error.message },
-      { status: 400 }
+  if (event.type === 'user.created') {
+    await User.create({
+      clerkUserId: id,
+      email: email_addresses[0].email_address,
+      firstName: first_name,
+      lastName: last_name,
+      username: username,
+      image: profile_image_url,
+    });
+  } else if (event.type === 'user.updated') {
+    await User.findOneAndUpdate(
+      { clerkUserId: id },
+      {
+        $set: {
+          email: email_addresses[0].email_address,
+          firstName: first_name,
+          lastName: last_name,
+          username: username,
+          image: profile_image_url,
+        },
+      },
+      { upsert: true }
     );
   }
+
+  res.status(200).json({ success: true });
 }
 
+// Next.js-nek fontos: a bodyParser-t ACTIVIZÁLNI KELL custom JSON-hoz!
+export const config = {
+  api: {
+    bodyParser: true, // vagy bodyParser: { sizeLimit: "1mb" }
+  },
+};
