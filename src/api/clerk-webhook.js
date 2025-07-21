@@ -35,17 +35,19 @@ export default async function handler(req, res) {
       throw new Error('Invalid webhook signature');
     }
 
-    const evt = body as {
-      type: string;
-      data: {
-        id: string;
-        email_addresses: Array<{ email_address: string }>;
-        image_url: string;
-        first_name?: string;
-        last_name?: string;
-        deleted_at?: string;
-      };
-    };
+    const evt = body;
+    
+    // Validate event structure
+    if (!evt || typeof evt !== 'object' || !evt.type || !evt.data) {
+      throw new Error('Invalid event structure');
+    }
+    
+    const { type, data } = evt;
+    
+    // Validate required data fields
+    if (!data || typeof data !== 'object' || !data.id || !data.email_addresses) {
+      throw new Error('Invalid event data');
+    }
 
     await dbConnect();
 

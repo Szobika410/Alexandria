@@ -12,8 +12,6 @@ async function testMongoConnection() {
 
     console.log('Connecting to MongoDB...');
     const client = new MongoClient(MONGODB_URL, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
       serverApi: {
         version: '1',
         strict: true,
