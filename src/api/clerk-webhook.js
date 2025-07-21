@@ -1,117 +1,97 @@
-import { dbConnect } from '@/lib/mongoose'; // vagy: import { dbConnect } from '../../lib/mongoose';
-import User from '@/models/User'; // vagy: import User from '../../models/User';
-import { Webhook } from 'svix';
+import { verifyWebhook } from '@clerk/nextjs/webhooks';
+import { dbConnect } from "@/lib/db";
+import User from "@/lib/models/User";
+import { NextResponse } from 'next/server';
 
-const webhookSecret = process.env.CLERK_WEBHOOK_SECRET;
-
-export default async function handler(req, res) {
-  if (req.method !== 'POST') return res.status(405).end();
-
-  // Svix header-ek:
-  const svix_id = req.headers['svix-id'];
-  const svix_signature = req.headers['svix-signature'];
-  const svix_timestamp = req.headers['svix-timestamp'];
-
-  if (!svix_id || !svix_signature || !svix_timestamp) {
-    return res.status(400).send('Missing Svix headers');
+const logEvent = (type, data, status = 'info', error = null) => {
+  const timestamp = `[${new Date().toISOString()}]`;
+  const baseMessage = `Clerk Webhook Event - ${status.toUpperCase()} - Type: ${type}`;
+  const userId = data?.id || 'unknown';
+  
+  console.log(`${timestamp} ${baseMessage}`);
+  console.log(`User ID: ${userId}`);
+  
+  if (error) {
+    console.error(`${timestamp} Error:`, error);
   }
+};
 
-  const wh = new Webhook(webhookSecret);
+const handleUserEvent = async (type, data) => {
+  const userData = {
+    clerkUserId: data.id,
+    email: data.email_addresses?.[0]?.email_address || '',
+    image: data.image_url,
+    firstName: data.first_name,
+    lastName: data.last_name
+  };
 
-  let event;
+  switch (type) {
+    case "user.created":
+      return User.create(userData);
+    case "user.updated":
+      return User.findOneAndUpdate(
+        { clerkUserId: userData.clerkUserId },
+        { ...userData, updatedAt: new Date() },
+        { new: true, upsert: true }
+      );
+    case "user.deleted":
+      return User.findOneAndDelete({ clerkUserId: userData.clerkUserId });
+    default:
+      throw new Error('Unsupported event type');
+  }
+};
+
+export async function POST(req) {
   try {
     const headerSignature = req.headers.get('x-clerk-signature');
     if (!headerSignature) {
-      throw new Error('Missing x-clerk-signature header');
+      return NextResponse.json({
+        success: false,
+        message: 'Missing x-clerk-signature header'
+      }, { status: 400 });
     }
 
-    const body = req.body;
-    if (!config.clerk.webhookSecret) {
-      throw new Error('WEBHOOK_SECRET is not configured');
+    const body = await req.json();
+    const { type, data } = body;
+
+    if (!type || !data) {
+      return NextResponse.json({
+        success: false,
+        message: 'Invalid event structure'
+      }, { status: 400 });
     }
 
-    const isValid = verifyWebhook(body);
-    if (!isValid) {
-      throw new Error('Invalid webhook signature');
-    }
-
-    const evt = body;
-    
-    // Validate event structure
-    if (!evt || typeof evt !== 'object' || !evt.type || !evt.data) {
-      throw new Error('Invalid event structure');
-    }
-    
-    const { type, data } = evt;
-    
-    // Validate required data fields
-    if (!data || typeof data !== 'object' || !data.id || !data.email_addresses) {
-      throw new Error('Invalid event data');
-    }
-
+    logEvent(type, data, 'received');
     await dbConnect();
-
-    switch (evt.type) {
-      case "user.created": {
-        const { id, email_addresses, image_url, first_name, last_name } = evt.data;
-        
-        const user = await User.create({
-          clerkUserId: id,
-          email: email_addresses[0].email_address,
-          image: image_url,
-          firstName: first_name,
-          lastName: last_name
-        });
-
-        return res.status(200).json({
-          success: true,
-          message: 'User created successfully',
-          user
-        });
-      }
-      case "user.updated": {
-        const { id, email_addresses, image_url, first_name, last_name } = evt.data;
-        
-        const user = await User.findOneAndUpdate(
-          { clerkUserId: id },
-          {
-            email: email_addresses[0].email_address,
-            image: image_url,
-            firstName: first_name,
-            LastName: last_name,
-            updatedAt: new Date()
-          },
-          { new: true }
-        );
-
-        return res.status(200).json({
-          success: true,
-          message: 'User updated successfully',
-          user
-        });
-      }
-      case "user.deleted": {
-        const { id } = evt.data;
-        
-        await User.findOneAndDelete({ clerkUserId: id });
-
-        return res.status(200).json({
-          success: true,
-          message: 'User deleted successfully'
-        });
-      }
-      default:
-        return res.status(400).json({
-          success: false,
-          message: 'Unsupported event type'
-        });
+    
+    const result = await handleUserEvent(type, data);
+    
+    if (!result) {
+      logEvent(type, data, 'error', 'Operation failed');
+      return NextResponse.json({
+        success: false,
+        message: 'Operation failed'
+      }, { status: 404 });
     }
-  } catch (error) {
-    console.error('Webhook error:', error);
-    return res.status(400).json({
-      success: false,
-      message: error instanceof Error ? error.message : 'Unknown error occurred'
+
+    logEvent(type, data, 'success');
+    
+    return NextResponse.json({
+      success: true,
+      message: 'Operation successful',
+      ...(result instanceof mongoose.Document ? { user: result } : {})
+    }, { 
+      status: type === 'user.created' ? 201 : 200 
     });
+  } catch (error) {
+    console.error(`[${new Date().toISOString()}] Webhook error:`, error);
+    
+    const status = error.message === 'Unsupported event type' ? 400 : 500;
+    
+    return NextResponse.json({
+      success: false,
+      message: error.message
+    }, { status });
   }
 }
 
