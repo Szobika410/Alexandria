@@ -17,8 +17,8 @@ export async function createUser({
   username,
   email,
   imageUrl,
-  firstName,
-  lastName
+  firstName = "",
+  lastName = ""
 }: CreateUserProps) {
   try {
     await dbConnect();
@@ -26,9 +26,9 @@ export async function createUser({
       clerkId,
       username,
       email,
-      imageUrl,
-      firstName,
-      lastName
+      imageUrl: imageUrl || "",
+      firstName: firstName || "",
+      lastName: lastName || "",
     });
     await newUser.save();
     return newUser;

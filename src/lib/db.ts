@@ -28,6 +28,27 @@ if(!catched){
 }
 
 export const dbConnect = async () => {
+    if (MONGODB_URL === undefined) {
+        throw new Error('MONGODB_URL is not defined in environment variables');
+    }
+
+    if (catched.conn) return catched.conn;
+
+    try {
+        console.log('Connecting to MongoDB...');
+        const mongooseOpts = {
+            serverSelectionTimeoutMS: 5000,
+            socketTimeoutMS: 45000,
+            family: 4
+        };
+        const conn = await mongoose.connect(MONGODB_URL, mongooseOpts);
+        console.log('Successfully connected to MongoDB');
+        catched.conn = conn;
+        return conn;
+    } catch (error) {
+        console.error('Error connecting to MongoDB:', error);
+        throw error;
+    }
     if(catched.conn){
         return catched.conn;
     }
